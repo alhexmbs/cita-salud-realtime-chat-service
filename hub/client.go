@@ -7,10 +7,10 @@ import (
 
 type Client struct {
 	Hub *Hub
-
 	Conn *websocket.Conn
-
 	Send chan []byte
+	UserID string
+	Rol string
 }
 
 // se encarga de leer mensajes del WebSocket y pasarlos al Hub
@@ -26,8 +26,13 @@ func (c *Client) ReadPump() {
 			log.Printf("Error al leer mensaje (cliente desconectado): %v", err)
 			break
 		}
+		
+		incoming := &IncomingMessage{
+			Sender: 		c,
+			MessageBytes: 	message,
+		}
 
-		c.Hub.Broadcast <- message
+		c.Hub.Broadcast <- incoming
 	}
 }
 

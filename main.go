@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"github.com/alhexmbs/cita-salud-realtime-chat-service/config"
 	"github.com/alhexmbs/cita-salud-realtime-chat-service/websocket"
 	"github.com/alhexmbs/cita-salud-realtime-chat-service/hub"
+	"github.com/alhexmbs/cita-salud-realtime-chat-service/db"
 )
 
 func handleHome(w http.ResponseWriter, r *http.Request) {
@@ -13,6 +15,10 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	config.LoadConfig()
+
+	db.ConnectDB()
+
 	// crea una instancia del hub
 	hubInstance := hub.NewHub()
 
