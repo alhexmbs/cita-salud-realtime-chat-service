@@ -60,6 +60,8 @@ func (h *Hub) Run() {
 			// decodificar el mensaje, enviado en JSON
 			var msgData struct {
 				Text string `json:"text"`
+				ChatID string `json:"chat_id"`
+				RecipientIDs []string `json:"recipient_ids"`
 			}
 
 			// intenta decodificar el mensaje
@@ -70,11 +72,12 @@ func (h *Hub) Run() {
 
 			// crea el objeto de la base de datos
 			newMsg := models.Message{
-				ID: 	  	primitive.NewObjectID(),
-				Text:		msgData.Text,
-				Timestamp:	time.Now(),
-				UserID:		incoming.Sender.UserID,
-				Rol:		incoming.Sender.Rol,
+				ID:        primitive.NewObjectID(),
+				ChatID:    msgData.ChatID, // ¡Guardamos el ChatID!
+				UserID:    incoming.Sender.UserID,
+				Rol:       incoming.Sender.Rol,
+				Text:      msgData.Text,
+				Timestamp: time.Now(),
 			}
 
 			// guarda el mensaje en mongo, en la colección "messages"
@@ -86,21 +89,30 @@ func (h *Hub) Run() {
 
 			// prepara el mensaje completo para enviar a los clientes
 			fullMessageBytes, err := json.Marshal(newMsg)
+
 			if err != nil {
 				log.Printf("Error al codificar el mensaje completo: %v", err)
 				continue
 			}
+			
+			targetIDs := make(map[string]bool)
+			targetIDs[incoming.Sender.UserID] = true // -> remitente
+			for _, id := range msgData.RecipientIDs {
+				targetIDs[id] = true // Todos los destinatarios
+			}
 
-			// difunde el mensaje a todos los clientes conectados
+			// Ahora, iteramos sobre TODOS los clientes conectados al Hub
 			for client := range h.Clients {
-				select {
-				case client.Send <- fullMessageBytes:
-					// el mensaje fue enviado
-				default:
-					close(client.Send)
-					delete(h.Clients, client)
+				// pero solo enviamos el mensaje si el UserID
+				// de ese cliente está en nuestro "set" de objetivos.
+				if targetIDs[client.UserID] {
+					select {
+					case client.Send <- fullMessageBytes:
+					default:
+						close(client.Send)
+						delete(h.Clients, client)
+					}
 				}
-				
 			}
 		}
 	}
