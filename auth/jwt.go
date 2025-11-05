@@ -14,8 +14,6 @@ type CustomClaims struct {
 }
 
 func ValidateToken(tokenString string) (*CustomClaims, error) {
-	// Parsea el token
-	// 'jwt.ParseWithClaims' toma el token, la struct de claims, y la función de validación
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 		// verifica el método de firma (algoritmo)
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

@@ -14,8 +14,8 @@ import (
 
 // wrapper que une el mensaje crudo con el cliente que lo envió
 type IncomingMessage struct {
-	Sender 			*Client
-	MessageBytes 	[]byte
+	Sender       *Client
+	MessageBytes []byte
 }
 
 type Hub struct {
@@ -34,7 +34,7 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		Clients: 	make(map[*Client]bool),
+		Clients:    make(map[*Client]bool),
 		Broadcast:  make(chan *IncomingMessage),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
@@ -47,20 +47,20 @@ func (h *Hub) Run() {
 		// un nuevo cliente se conecta
 		case client := <-h.Register:
 			h.Clients[client] = true
-		
+
 		// un cliente se ha desconectado
 		case client := <-h.Unregister:
 			if _, ok := h.Clients[client]; ok {
 				close(client.Send)
 				delete(h.Clients, client)
 			}
-		
+
 		// un cliente ha enviado un mensaje
 		case incoming := <-h.Broadcast:
 			// decodificar el mensaje, enviado en JSON
 			var msgData struct {
-				Text string `json:"text"`
-				ChatID string `json:"chat_id"`
+				Text         string   `json:"text"`
+				ChatID       string   `json:"chat_id"`
 				RecipientIDs []string `json:"recipient_ids"`
 			}
 
@@ -73,11 +73,11 @@ func (h *Hub) Run() {
 			// crea el objeto de la base de datos
 			newMsg := models.Message{
 				ID:        primitive.NewObjectID(),
-				ChatID:    msgData.ChatID, // ¡Guardamos el ChatID!
-				UserID:    incoming.Sender.UserID,
-				Rol:       incoming.Sender.Rol,
+				ChatID:    msgData.ChatID,
 				Text:      msgData.Text,
 				Timestamp: time.Now(),
+				SenderID:  incoming.Sender.UserID,
+				SenderRol: incoming.Sender.Rol,
 			}
 
 			// guarda el mensaje en mongo, en la colección "messages"
@@ -94,17 +94,18 @@ func (h *Hub) Run() {
 				log.Printf("Error al codificar el mensaje completo: %v", err)
 				continue
 			}
-			
+
+			// 5. LÓGICA DE DIFUSIÓN (Broadcast) - MÁS SIMPLE Y POTENTE
+
+			// Creamos un "set" de todos los que deben recibirlo
 			targetIDs := make(map[string]bool)
-			targetIDs[incoming.Sender.UserID] = true // -> remitente
+			targetIDs[incoming.Sender.UserID] = true // El que envía
+
 			for _, id := range msgData.RecipientIDs {
-				targetIDs[id] = true // Todos los destinatarios
+				targetIDs[id] = true // Todos los que reciben
 			}
 
-			// Ahora, iteramos sobre TODOS los clientes conectados al Hub
 			for client := range h.Clients {
-				// pero solo enviamos el mensaje si el UserID
-				// de ese cliente está en nuestro "set" de objetivos.
 				if targetIDs[client.UserID] {
 					select {
 					case client.Send <- fullMessageBytes:
@@ -114,6 +115,7 @@ func (h *Hub) Run() {
 					}
 				}
 			}
+
 		}
 	}
 }
