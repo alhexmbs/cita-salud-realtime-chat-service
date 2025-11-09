@@ -45,7 +45,7 @@ jobs:
             
             docker pull ${{ secrets.DOCKER_REPO_CHAT }}:latest
             
-            docker-compose up -d --build --no-deps cita-salud-chat
-            
+            docker-compose up -d --force-recreate --no-deps cita-salud-chat
+        
             docker image prune -f
             echo "¡Servicio de Chat desplegado con éxito!"
