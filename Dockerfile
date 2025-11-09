@@ -31,8 +31,8 @@ WORKDIR /root/
 # Copiamos SOLO el binario compilado de la etapa 'builder'
 COPY --from=builder /app/main .
 
-# Exponemos el puerto que tu app Go está usando (8083)
-EXPOSE 8083
+# Exponemos el puerto que tu app Go está usando (8000)
+EXPOSE 8000
 
 # El comando que se ejecutará cuando el contenedor inicie
 CMD ["./main"]

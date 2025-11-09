@@ -31,9 +31,9 @@ func main() {
 		websocket.HandleConnection(hubInstance, w, r)
 	})
 
-	log.Println("Servidor iniciado en http://localhost:8083")
+	log.Println("Servidor iniciado en http://localhost:8000")
 
-	if err := http.ListenAndServe(":8083", nil); err != nil {
+	if err := http.ListenAndServe(":8000", nil); err != nil {
 		log.Fatalf("Error al iniciar el servidor: %v", err)
 	}
 }
