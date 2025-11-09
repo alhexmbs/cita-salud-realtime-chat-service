@@ -70,6 +70,8 @@ func (h *Hub) Run() {
 				continue
 			}
 
+			// robles chambea mano
+			
 			// crea el objeto de la base de datos
 			newMsg := models.Message{
 				ID:        primitive.NewObjectID(),
