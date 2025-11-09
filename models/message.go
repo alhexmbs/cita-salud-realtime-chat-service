@@ -6,6 +6,7 @@ import (
 )
 
 // estructura de un mensaje
+
 type Message struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	ChatID    string             `bson:"chat_id" json:"chat_id"`
