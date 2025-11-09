@@ -71,6 +71,7 @@ func (h *Hub) Run() {
 			}
 
 			// robles chambea mano
+			// la suerte
 			
 			// crea el objeto de la base de datos
 			newMsg := models.Message{
