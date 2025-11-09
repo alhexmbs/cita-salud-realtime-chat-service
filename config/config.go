@@ -10,6 +10,7 @@ import (
 // config es una struct que contendrá toas las variables de entorno
 type Config struct {
 	JwtSecret string
+	MongoURI  string
 }
 
 // instancia global de la configuración
@@ -27,5 +28,11 @@ func LoadConfig() {
 	AppConfig.JwtSecret = os.Getenv("JWT_SECRET")
 	if AppConfig.JwtSecret == "" {
 		log.Fatal("FATAL: JWT_SECRET no está definida en las variables de entorno")
+	}
+
+	// lee la variable URI de mongodb atlas
+	AppConfig.MongoURI = os.Getenv("URI")
+	if AppConfig.MongoURI == "" {
+		log.Fatal("FATAL: URI no está definida en las variables de entorno")
 	}
 }

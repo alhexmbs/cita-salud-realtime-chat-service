@@ -4,16 +4,19 @@ import (
 	"context"
 	"log"
 	"time"
+	"github.com/alhexmbs/cita-salud-realtime-chat-service/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var DB *mongo.Database
 
-// uri local por ahora. luego la cambio (/config)
-const uri = "mongodb://localhost:27017"
+
 
 func ConnectDB() {
+
+	uri := config.AppConfig.MongoURI
+	
 	// definición del contexto con timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
