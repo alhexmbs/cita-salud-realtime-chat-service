@@ -1,6 +1,6 @@
 # ---- Etapa 1: Compilador (Builder) ----
-# Usamos la imagen oficial de Go (Alpine es ligera)
-FROM golang:1.21-alpine AS builder
+# CAMBIO: Usamos Go 1.25 para cumplir con el go.mod
+FROM golang:1.25-alpine AS builder
 
 # Establecemos el directorio de trabajo dentro del contenedor
 WORKDIR /app
@@ -16,8 +16,6 @@ RUN go mod download
 COPY . .
 
 # Compilamos la aplicación para Linux, deshabilitando CGO
-# Esto crea un binario estático que funciona perfectamente en Alpine
-# El binario se guardará como '/app/main'
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main .
 
 # ---- Etapa 2: Final (Producción) ----
@@ -25,7 +23,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /app/main .
 FROM alpine:latest
 
 # ¡IMPORTANTE! Para que Mongo Atlas (mongodb+srv://) funcione
-# Necesitamos los certificados raíz de confianza
 RUN apk add --no-cache ca-certificates
 
 # Establecemos el directorio de trabajo
