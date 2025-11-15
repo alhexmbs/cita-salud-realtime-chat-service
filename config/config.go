@@ -17,9 +17,6 @@ type Config struct {
 var AppConfig Config
 
 
-// eliminando ando
-// xd
-
 func LoadConfig() {
 	// carga el archivo .env
 	if err := godotenv.Load(); err != nil {
