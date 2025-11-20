@@ -58,31 +58,43 @@ func (h *Hub) Run() {
 		// un cliente ha enviado un mensaje
 		case incoming := <-h.Broadcast:
 			// decodificar el mensaje, enviado en JSON
-			var msgData struct {
-				Text         string   `json:"text"`
-				ChatID       string   `json:"chat_id"`
-				RecipientIDs []string `json:"recipient_ids"`
+			var msgInput struct {
+				Type         string               `json:"type"`
+				Text         string               `json:"text"`
+				Location     *models.LocationData `json:"location"`
+				ChatID       string               `json:"chat_id"`
+				RecipientIDs []string             `json:"recipient_ids"`
 			}
 
 			// intenta decodificar el mensaje
-			if err := json.Unmarshal(incoming.MessageBytes, &msgData); err != nil {
+			if err := json.Unmarshal(incoming.MessageBytes, &msgInput); err != nil {
 				log.Printf("Error al decodificar el mensaje: %v", err)
 				continue
 			}
 
-			// robles chambea mano
-			// la suerte
+			if msgInput.Type == "" {
+				msgInput.Type = "text"
+			}
 			
 			// crea el objeto de la base de datos
 			newMsg := models.Message{
 				ID:        primitive.NewObjectID(),
-				ChatID:    msgData.ChatID,
-				Text:      msgData.Text,
+				ChatID:    msgInput.ChatID,
 				Timestamp: time.Now(),
 				SenderID:  incoming.Sender.UserID,
 				SenderRol: incoming.Sender.Rol,
+				Type:      msgInput.Type,
 			}
 
+			// llenaro los datos según el tipo
+			if msgInput.Type == "location" {
+				newMsg.Location = msgInput.Location
+				newMsg.Text = "📍 Ubicación compartida"
+			} else {
+				newMsg.Text = msgInput.Text
+			}
+
+			
 			// guarda el mensaje en mongo, en la colección "messages"
 			collection := db.DB.Collection("messages")
 			_, err := collection.InsertOne(context.Background(), newMsg)
@@ -98,14 +110,12 @@ func (h *Hub) Run() {
 				continue
 			}
 
-			// 5. LÓGICA DE DIFUSIÓN (Broadcast) - MÁS SIMPLE Y POTENTE
-
-			// Creamos un "set" de todos los que deben recibirlo
+			
 			targetIDs := make(map[string]bool)
-			targetIDs[incoming.Sender.UserID] = true // El que envía
+			targetIDs[incoming.Sender.UserID] = true
 
-			for _, id := range msgData.RecipientIDs {
-				targetIDs[id] = true // Todos los que reciben
+			for _, id := range msgInput.RecipientIDs {
+				targetIDs[id] = true 
 			}
 
 			for client := range h.Clients {
