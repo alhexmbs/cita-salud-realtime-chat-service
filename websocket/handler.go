@@ -1,61 +1,72 @@
 package websocket
 
 import (
-	"log"
-	"net/http"
+    "log"
+    "net/http"
 
-	"github.com/alhexmbs/cita-salud-realtime-chat-service/auth"
-	"github.com/alhexmbs/cita-salud-realtime-chat-service/hub"
-	"github.com/gorilla/websocket"
+    "github.com/alhexmbs/cita-salud-realtime-chat-service/auth"
+    "github.com/alhexmbs/cita-salud-realtime-chat-service/hub"
+    "github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{
-	// tamaño de los buffers de lectura y escritura
-	ReadBufferSize: 1024,
-	WriteBufferSize: 1024,
-
-	//permitir o denegar conexiones desde otros dominios
-	CheckOrigin: func(r *http.Request) bool {
-		return true // por ahora permitimos todas las conexiones
-	},
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
+    CheckOrigin: func(r *http.Request) bool {
+        return true
+    },
 }
 
 func HandleConnection(hubInstance *hub.Hub, w http.ResponseWriter, r *http.Request) {
 
-	// extraer el token de la query
-	tokenString := r.URL.Query().Get("token")
-	if tokenString == "" {
-		log.Println("Rechazado. Falta el token papu")
-		http.Error(w, "Falta el token papito", http.StatusUnauthorized)
-	}
+    // extraer y validar el token
+    tokenString := r.URL.Query().Get("token")
+    if tokenString == "" {
+        log.Println("Rechazado. Falta el token papu")
+        http.Error(w, "Falta el token papito", http.StatusUnauthorized)
+        return
+    }
 
-	// validar el token
-	claims, err := auth.ValidateToken(tokenString)
-	if err != nil {
-		log.Printf("Rechazado: Token inválido (%v)", err)
-		http.Error(w, "Token inválido", http.StatusUnauthorized)
-		return
-	}
+    claims, err := auth.ValidateToken(tokenString)
+    if err != nil {
+        log.Printf("Rechazado: Token inválido (%v)", err)
+        http.Error(w, "Token inválido", http.StatusUnauthorized)
+        return
+    }
 
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("Error al actualizar a WebSocket:", err)
-		return
-	}
+    // actualizar a WebSocket
+    conn, err := upgrader.Upgrade(w, r, nil)
+    if err != nil {
+        log.Println("Error al actualizar a WebSocket:", err)
+        return
+    }
 
-	client := &hub.Client{
-		Hub: hubInstance,
-		Conn: conn,
-		Send: make(chan []byte, 256),
-		UserID: claims.UserID,
-		Rol: claims.Rol,
-	}
+    // ---------------------------------------------------------
+    // LÓGICA PARA DECIDIR EL ID (EL CAMBIO ESTÁ AQUÍ)
+    // ---------------------------------------------------------
+    
+    // por defecto el UserID normal que es para pacientes
+    chatUserID := claims.UserID 
 
-	// registra un nuevo cliente en el hub
-	client.Hub.Register <- client
+    // si es médico y trae el OID -> id_personal_especialidad, ese es el ID que uso
+    if claims.Rol == "personal_medico" && claims.OID != "" {
+        chatUserID = claims.OID
+    }
+    // ---------------------------------------------------------
 
-	log.Printf("Cliente conectado (Usuario: %s, Rol: %s)", client.UserID, client.Rol)
+    client := &hub.Client{
+        Hub:    hubInstance,
+        Conn:   conn,
+        Send:   make(chan []byte, 256),
+        UserID: chatUserID, // usamos la variable calculada
+        Rol:    claims.Rol,
+    }
 
-	go client.WritePump()
-	go client.ReadPump()
+    // registra un nuevo cliente en el hub
+    client.Hub.Register <- client
+
+    log.Printf("Cliente conectado (ID_Chat: %s, Rol: %s, ID_Real: %s)", client.UserID, client.Rol, claims.UserID)
+
+    go client.WritePump()
+    go client.ReadPump()
 }

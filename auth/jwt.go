@@ -8,9 +8,10 @@ import (
 )
 
 type CustomClaims struct {
-	UserID string `json:"sub"`
-	Rol string `json:"rol"`
-	jwt.RegisteredClaims
+    UserID string `json:"sub"`
+    Rol    string `json:"rol"`
+    OID    string `json:"oid"` 
+    jwt.RegisteredClaims
 }
 
 func ValidateToken(tokenString string) (*CustomClaims, error) {
